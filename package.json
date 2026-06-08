@@ -1,0 +1,29 @@
+{
+  "name": "alphacouncil",
+  "private": true,
+  "packageManager": "pnpm@10.25.0",
+  "version": "1.0.0",
+  "description": "Neutral AI Intelligence Memory Layer for Mantle Blockchain",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "demo": "ts-node scripts/demo.ts"
+  },
+  "dependencies": {
+    "@alphacouncil/ai-agents": "workspace:*",
+    "@alphacouncil/blockchain-writer": "workspace:*",
+    "@alphacouncil/database": "workspace:*",
+    "@alphacouncil/rag": "workspace:*",
+    "@alphacouncil/shared": "workspace:*",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.5.0",
+    "ts-node": "^10.9.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

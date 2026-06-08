@@ -1,0 +1,22 @@
+version: '3.9'
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: alphacouncil-db
+    environment:
+      POSTGRES_USER: mantle
+      POSTGRES_PASSWORD: memorygraph
+      POSTGRES_DB: memorygraph
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mantle -d memorygraph"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

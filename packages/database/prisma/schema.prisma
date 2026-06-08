@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// Core observation model
+// ─────────────────────────────────────────────
+
+model Observation {
+  id                    String   @id @default(cuid())
+  source                String
+  chain                 String
+  eventType             String
+  primaryEntity         String
+  relatedWallets        String[] @default([])
+  relatedTokens         String[] @default([])
+  relatedContracts      String[] @default([])
+  txHash                String?
+  blockNumber           Int?
+  facts                 Json     @default("[]")
+  rawData               Json     @default("{}")
+  relevanceScore        Int      @default(0)
+  noveltyScore          Int      @default(0)
+  patternSimilarity     Int      @default(0)
+  contextCoverage       Int      @default(0)
+  summary               String?
+  limitations           String[] @default([])
+  observationHash       String?
+  onchainTxHash         String?
+  onchainObservationId  Int?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  agentRuns             AgentRun[]
+
+  @@index([source])
+  @@index([chain])
+  @@index([eventType])
+  @@index([primaryEntity])
+  @@index([txHash])
+  @@index([blockNumber])
+  @@index([createdAt])
+  @@index([relevanceScore])
+}
+
+// ─────────────────────────────────────────────
+// Profile models
+// ─────────────────────────────────────────────
+
+model WalletProfile {
+  id           String   @id @default(cuid())
+  address      String   @unique
+  observations Int      @default(0)
+  summary      String?
+  tags         String[] @default([])
+  lastSeenAt   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([address])
+  @@index([lastSeenAt])
+}
+
+model TokenProfile {
+  id           String   @id @default(cuid())
+  address      String   @unique
+  symbol       String?
+  observations Int      @default(0)
+  lastSeenAt   DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([address])
+  @@index([lastSeenAt])
+}
+
+model ContractProfile {
+  id           String   @id @default(cuid())
+  address      String   @unique
+  name         String?
+  observations Int      @default(0)
+  lastSeenAt   DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([address])
+  @@index([lastSeenAt])
+}
+
+// ─────────────────────────────────────────────
+// Pattern / agent / snapshot models
+// ─────────────────────────────────────────────
+
+model PatternMemory {
+  id             String   @id @default(cuid())
+  name           String
+  description    String
+  entities       String[] @default([])
+  observationIds String[] @default([])
+  confidence     Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  @@index([name])
+  @@index([confidence])
+}
+
+model AgentRun {
+  id            String   @id @default(cuid())
+  observationId String?
+  agentName     String
+  agentRole     String
+  modelProvider String
+  input         Json     @default("{}")
+  output        Json     @default("{}")
+  createdAt     DateTime @default(now())
+
+  observations  Observation[]
+
+  @@index([agentName])
+  @@index([observationId])
+  @@index([createdAt])
+}
+
+model MemorySnapshot {
+  id            String   @id @default(cuid())
+  memoryType    String
+  periodStart   DateTime
+  periodEnd     DateTime
+  summary       String
+  snapshotHash  String?
+  onchainTxHash String?
+  createdAt     DateTime @default(now())
+
+  @@index([memoryType])
+  @@index([periodStart])
+  @@index([periodEnd])
+  @@index([createdAt])
+}

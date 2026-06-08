@@ -1,0 +1,23 @@
+{
+  "name": "@alphacouncil/worker",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "ts-node src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@alphacouncil/mantle-indexer": "workspace:*",
+    "@alphacouncil/database": "workspace:*",
+    "@alphacouncil/rag": "workspace:*",
+    "@alphacouncil/ai-agents": "workspace:*",
+    "@alphacouncil/blockchain-writer": "workspace:*",
+    "@alphacouncil/shared": "workspace:*",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "ts-node": "^10.9.0",
+    "@types/node": "^20.0.0"
+  }
+}

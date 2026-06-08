@@ -1,0 +1,21 @@
+{
+  "name": "@alphacouncil/contracts",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "compile": "hardhat compile",
+    "deploy": "hardhat run scripts/deploy.ts --network mantleSepolia",
+    "export-abi": "hardhat run scripts/export-abi.ts"
+  },
+  "dependencies": {
+    "viem": "^2.0.0"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@tsconfig/node20": "^20.0.0",
+    "dotenv": "^16.4.0",
+    "hardhat": "^2.22.0",
+    "solc": "^0.8.35",
+    "typescript": "^5.5.0"
+  }
+}

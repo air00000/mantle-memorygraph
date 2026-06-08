@@ -1,0 +1,20 @@
+{
+  "name": "@alphacouncil/bot",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "ts-node src/bot.ts",
+    "build": "tsc",
+    "start": "node dist/bot.js"
+  },
+  "dependencies": {
+    "grammy": "^1.25.0",
+    "@alphacouncil/database": "workspace:*",
+    "@alphacouncil/shared": "workspace:*",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "ts-node": "^10.9.0",
+    "@types/node": "^20.0.0"
+  }
+}

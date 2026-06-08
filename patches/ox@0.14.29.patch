@@ -1,0 +1,9 @@
+diff --git a/tempo/KeyAuthorization.ts b/tempo/KeyAuthorization.ts
+index 497846068a48e927133724e877f7f5f50bb71af3..3bd9a4d10f70523f158c605c50a651df595d5cd7 100644
+--- a/tempo/KeyAuthorization.ts
++++ b/tempo/KeyAuthorization.ts
+@@ -1,3 +1,4 @@
++// @ts-nocheck
+ import * as AbiItem from '../core/AbiItem.js'
+ import type * as Address from '../core/Address.js'
+ import type * as Errors from '../core/Errors.js'

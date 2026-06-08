@@ -1,0 +1,62 @@
+import { createWalletClient, http, privateKeyToAccount } from "viem";
+import { mantleSepoliaTestnet } from "viem/chains";
+import * as dotenv from "dotenv";
+import * as fs from "fs";
+import * as path from "path";
+
+dotenv.config({ path: "../../.env" });
+
+const PRIVATE_KEY = process.env.PRIVATE_KEY;
+const RPC = process.env.ALPHACOUNCIL_SEPOLIA_RPC || "https://rpc.sepolia.mantle.xyz";
+
+if (!PRIVATE_KEY) {
+  console.error("PRIVATE_KEY not set in .env");
+  process.exit(1);
+}
+
+const account = privateKeyToAccount(
+  PRIVATE_KEY.startsWith("0x") ? (PRIVATE_KEY as `0x${string}`) : (`0x${PRIVATE_KEY}` as `0x${string}`)
+);
+
+const client = createWalletClient({
+  account,
+  chain: mantleSepoliaTestnet,
+  transport: http(RPC),
+});
+
+async function deployContract(name: string) {
+  const bytecode = fs.readFileSync(path.join(__dirname, "../out", `${name}.bin`), "utf8") as `0x${string}`;
+  const hash = await client.deployContract({
+    abi: [],
+    bytecode,
+  });
+  console.log(`[${name}] deploy tx: ${hash}`);
+
+  const receipt = await client.waitForTransactionReceipt({ hash });
+  const address = receipt.contractAddress;
+  if (!address) {
+    throw new Error(`[${name}] deployment failed — no contract address in receipt`);
+  }
+  console.log(`[${name}] deployed to: ${address}`);
+  return address;
+}
+
+async function main() {
+  console.log("Deploying with account:", account.address);
+  console.log("RPC:", RPC);
+  console.log("");
+
+  const observationAddress = await deployContract("ObservationRegistry");
+  const memoryAddress = await deployContract("MemoryAnchor");
+  const agentAddress = await deployContract("AgentRegistry");
+
+  console.log("\n=== Deployment Summary ===");
+  console.log(`OBSERVATION_REGISTRY_ADDRESS=${observationAddress}`);
+  console.log(`MEMORY_ANCHOR_ADDRESS=${memoryAddress}`);
+  console.log(`AGENT_REGISTRY_ADDRESS=${agentAddress}`);
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
