@@ -122,7 +122,7 @@ Return strictly JSON in this format:
   }>(raw, {
     eventType: "generic_transfer",
     facts: [
-      { field: "raw_event", value: JSON.stringify(event), confidence: 0.5 },
+      { field: "raw_event", value: JSON.stringify(event, (_, v) => typeof v === "bigint" ? v.toString() : v), confidence: 0.5 },
     ],
   });
 

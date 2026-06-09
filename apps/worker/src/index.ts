@@ -24,6 +24,30 @@ const prisma = new PrismaClient();
 
 const ANCHOR_ENABLED = isAnchoringAvailable();
 const ANCHOR_RELEVANCE_THRESHOLD = 50;
+const MODEL_PROVIDER = process.env.LLM_PROVIDER || "mock";
+
+async function logAgentRun(
+  agentName: string,
+  agentRole: string,
+  observationId: string | null,
+  input: unknown,
+  output: unknown
+) {
+  try {
+    await prisma.agentRun.create({
+      data: {
+        agentName,
+        agentRole,
+        modelProvider: MODEL_PROVIDER,
+        observationId,
+        input: input as any,
+        output: output as any,
+      },
+    });
+  } catch (err) {
+    console.error(`[Worker] Failed to log agent run ${agentName}:`, err);
+  }
+}
 
 console.log(
   `[Worker] On-chain anchoring: ${ANCHOR_ENABLED ? "ENABLED" : "DISABLED (set PRIVATE_KEY + OBSERVATION_REGISTRY_ADDRESS to enable)"}`
@@ -40,11 +64,12 @@ async function onNewEvent(events: MantleEventLog[]) {
 
       // Step 1: Collector decides if event is worth keeping
       const decision = await collectorAgent(log as any);
-    if (!decision.keep) {
-      console.log(`[Worker] Event discarded: ${decision.reason}`);
-      return;
-    }
-    console.log(`[Worker] Event kept: ${decision.reason}`);
+      await logAgentRun("Collector", "Decide if event is worth keeping", null, log, decision);
+      if (!decision.keep) {
+        console.log(`[Worker] Event discarded: ${decision.reason}`);
+        return;
+      }
+      console.log(`[Worker] Event kept: ${decision.reason}`);
 
     // Step 2: Normalizer converts to structured facts
     const normalized = await normalizerAgent({
@@ -52,6 +77,7 @@ async function onNewEvent(events: MantleEventLog[]) {
       source: "mantle_onchain",
       chain: "mantle_sepolia",
     } as any);
+    await logAgentRun("Normalizer", "Convert raw event to structured facts", null, { rawData: log, source: "mantle_onchain", chain: "mantle_sepolia" }, normalized);
     console.log(`[Worker] Normalized: ${normalized.eventType}`);
 
     // Extract entities from log
@@ -102,6 +128,7 @@ async function onNewEvent(events: MantleEventLog[]) {
       observation as any,
       context.pastObservations as any
     );
+    await logAgentRun("ContextBuilder", "Build historical context", observation.id, { observation, pastObservations: context.pastObservations }, contextResult);
     const contextCoverage = Math.min(contextResult.contextCoverage || 30, 100);
 
     // Step 6: Pattern Matcher
@@ -109,6 +136,7 @@ async function onNewEvent(events: MantleEventLog[]) {
       observation as any,
       context.patterns as any
     );
+    await logAgentRun("PatternMatcher", "Match against known patterns", observation.id, { observation, patterns: context.patterns }, patternResult);
     const patternSimilarity = Math.min(
       patternResult.patternSimilarity || 30,
       100
@@ -134,9 +162,11 @@ async function onNewEvent(events: MantleEventLog[]) {
       contextCoverage,
     };
     let digest = await digestWriterAgent(digestPayload as any);
+    await logAgentRun("DigestWriter", "Generate AI digest", observation.id, digestPayload, { digest });
 
     // Step 8: Bias Guard
     const biasCheck = await biasGuardAgent(digest);
+    await logAgentRun("BiasGuard", "Check for speculative language", observation.id, { digest }, biasCheck);
     if (biasCheck.clean && biasCheck.text) {
       digest = biasCheck.text;
     }
