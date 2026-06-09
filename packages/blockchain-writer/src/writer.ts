@@ -1,5 +1,6 @@
 import {
   createWalletClient,
+  createPublicClient,
   http,
   keccak256,
   stringToHex,
@@ -18,34 +19,88 @@ const ALPHACOUNCIL_SEPOLIA_RPC =
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 
-function getWalletClient() {
+function getAccount() {
   if (!PRIVATE_KEY) {
     throw new Error(
       "PRIVATE_KEY not set in .env — required for on-chain anchoring. " +
         "Set it to enable blockchain writes, or skip anchoring."
     );
   }
-  const account = privateKeyToAccount(
+  return privateKeyToAccount(
     PRIVATE_KEY.startsWith("0x")
       ? (PRIVATE_KEY as `0x${string}`)
       : (`0x${PRIVATE_KEY}` as `0x${string}`)
   );
-  return createWalletClient({
-    account,
-    chain: mantleSepoliaTestnet,
-    transport: http(ALPHACOUNCIL_SEPOLIA_RPC),
-  });
 }
 
-// Sequential transaction queue — prevents nonce collisions when multiple
-// anchor calls happen in rapid succession (e.g. many events in one block)
-let txQueue: Promise<unknown> = Promise.resolve();
+const account = getAccount();
 
-function runTxSequentially<T>(fn: () => Promise<T>): Promise<T> {
-  const next = txQueue.then(() => fn());
-  // Catch errors so one failure doesn't block the whole queue
-  txQueue = next.catch(() => {});
-  return next;
+const walletClient = createWalletClient({
+  account,
+  chain: mantleSepoliaTestnet,
+  transport: http(ALPHACOUNCIL_SEPOLIA_RPC),
+});
+
+const publicClient = createPublicClient({
+  chain: mantleSepoliaTestnet,
+  transport: http(ALPHACOUNCIL_SEPOLIA_RPC),
+});
+
+// ─── Nonce management ─────────────────────────────────────
+// We track nonce locally because rapid sequential transactions
+// can collide when each call queries the node independently.
+
+let nextNonce: number | null = null;
+let nonceLock: Promise<unknown> = Promise.resolve();
+
+async function getNextNonce(): Promise<number> {
+  if (nextNonce === null) {
+    nextNonce = await publicClient.getTransactionCount({
+      address: account.address,
+      blockTag: "pending",
+    });
+  }
+  const nonce = nextNonce;
+  nextNonce++;
+  return nonce;
+}
+
+function resetNonce() {
+  nextNonce = null;
+}
+
+async function sendTransactionWithNonce<T>(
+  fn: (nonce: number) => Promise<T>
+): Promise<T> {
+  const release = await acquireNonceLock();
+  try {
+    const nonce = await getNextNonce();
+    return await fn(nonce);
+  } catch (err: any) {
+    // If nonce error, reset so next call refetches from chain
+    if (
+      err?.message?.includes("nonce too low") ||
+      err?.message?.includes("replacement transaction underpriced") ||
+      err?.details?.includes("nonce too low") ||
+      err?.details?.includes("replacement transaction underpriced")
+    ) {
+      resetNonce();
+    }
+    throw err;
+  } finally {
+    release();
+  }
+}
+
+async function acquireNonceLock(): Promise<() => void> {
+  let release = () => {};
+  const promise = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const previous = nonceLock;
+  nonceLock = previous.then(() => promise);
+  await previous;
+  return release;
 }
 
 // ─── ABI ──────────────────────────────────────────────────
@@ -141,10 +196,8 @@ export async function anchorObservation(
     "ObservationRegistry"
   );
 
-  const client = getWalletClient();
-
-  return runTxSequentially(async () => {
-    const { request } = await simulateContract(client, {
+  return sendTransactionWithNonce(async (nonce) => {
+    const { request } = await simulateContract(walletClient, {
       address,
       abi: observationRegistryABI,
       functionName: "registerObservation",
@@ -157,9 +210,10 @@ export async function anchorObservation(
         Math.min(observation.patternSimilarity, 100) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30 | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 40 | 41 | 42 | 43 | 44 | 45 | 46 | 47 | 48 | 49 | 50 | 51 | 52 | 53 | 54 | 55 | 56 | 57 | 58 | 59 | 60 | 61 | 62 | 63 | 64 | 65 | 66 | 67 | 68 | 69 | 70 | 71 | 72 | 73 | 74 | 75 | 76 | 77 | 78 | 79 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 87 | 88 | 89 | 90 | 91 | 92 | 93 | 94 | 95 | 96 | 97 | 98 | 99 | 100,
         Math.min(observation.contextCoverage, 100) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30 | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 40 | 41 | 42 | 43 | 44 | 45 | 46 | 47 | 48 | 49 | 50 | 51 | 52 | 53 | 54 | 55 | 56 | 57 | 58 | 59 | 60 | 61 | 62 | 63 | 64 | 65 | 66 | 67 | 68 | 69 | 70 | 71 | 72 | 73 | 74 | 75 | 76 | 77 | 78 | 79 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 87 | 88 | 89 | 90 | 91 | 92 | 93 | 94 | 95 | 96 | 97 | 98 | 99 | 100,
       ],
+      nonce,
     });
 
-    const txHash = await writeContract(client, request);
+    const txHash = await writeContract(walletClient, { ...request, nonce });
     return { hash, txHash };
   });
 }
@@ -183,8 +237,6 @@ export async function anchorMemorySnapshot(
     "MemoryAnchor"
   );
 
-  const client = getWalletClient();
-
   // MemoryAnchor ABI inline (simplified for MVP)
   const abi = [
     {
@@ -200,15 +252,16 @@ export async function anchorMemorySnapshot(
     },
   ] as const;
 
-  return runTxSequentially(async () => {
-    const { request } = await simulateContract(client, {
+  return sendTransactionWithNonce(async (nonce) => {
+    const { request } = await simulateContract(walletClient, {
       address,
       abi,
       functionName: "anchorMemory",
       args: [hash, snapshot.memoryType, snapshot.summary],
+      nonce,
     });
 
-    const txHash = await writeContract(client, request);
+    const txHash = await writeContract(walletClient, { ...request, nonce });
     return { hash, txHash };
   });
 }
