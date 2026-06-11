@@ -1,0 +1,26 @@
+[Unit]
+Description=AlphaCouncil Dashboard (Next.js)
+Documentation=https://github.com/your-org/alphacouncil
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=alphacouncil
+Group=alphacouncil
+WorkingDirectory=/opt/alphacouncil/apps/dashboard
+EnvironmentFile=/opt/alphacouncil/.env
+Environment="NODE_ENV=production"
+Environment="PORT=3000"
+Environment="HOSTNAME=0.0.0.0"
+ExecStart=/usr/bin/node /opt/alphacouncil/node_modules/next/dist/bin/next start
+Restart=on-failure
+RestartSec=5
+StartLimitInterval=60s
+StartLimitBurst=3
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=alphacouncil-dashboard
+
+[Install]
+WantedBy=multi-user.target

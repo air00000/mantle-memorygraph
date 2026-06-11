@@ -1,0 +1,24 @@
+[Unit]
+Description=AlphaCouncil Telegram Bot (grammY)
+Documentation=https://github.com/your-org/alphacouncil
+After=network.target postgresql.service
+Wants=network.target
+
+[Service]
+Type=simple
+User=alphacouncil
+Group=alphacouncil
+WorkingDirectory=/opt/alphacouncil/apps/bot
+EnvironmentFile=/opt/alphacouncil/.env
+Environment="NODE_ENV=production"
+ExecStart=/usr/bin/node dist/bot.js
+Restart=on-failure
+RestartSec=10
+StartLimitInterval=60s
+StartLimitBurst=3
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=alphacouncil-bot
+
+[Install]
+WantedBy=multi-user.target

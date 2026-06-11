@@ -1,0 +1,12 @@
+node_modules
+apps/*/node_modules
+packages/*/node_modules
+apps/dashboard/.next/cache
+.git
+.turbo
+*.log
+.DS_Store
+.env.local
+.env.*.local
+.vscode
+.idea
