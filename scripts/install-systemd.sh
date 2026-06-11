@@ -82,8 +82,20 @@ sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname = '$DB_USER';" |
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
 sudo -u postgres psql -d "$DB_NAME" -c "ALTER USER $DB_USER WITH SUPERUSER;" 2>/dev/null || true
 
+# Ensure .env exists with DATABASE_URL
+ENV_FILE="$INSTALL_DIR/.env"
+if [ ! -f "$ENV_FILE" ]; then
+    echo "📝 Creating $ENV_FILE..."
+    cat > "$ENV_FILE" <<EOF
+DATABASE_URL=postgresql://$DB_USER:$DB_PASS@localhost:5432/$DB_NAME
+LLM_PROVIDER=mock
+EOF
+    chown "$USER:$GROUP" "$ENV_FILE"
+fi
+
 # Apply Prisma schema
-su -s /bin/bash "$USER" -c "cd $INSTALL_DIR/packages/database && pnpm push"
+export DATABASE_URL="postgresql://$DB_USER:$DB_PASS@localhost:5432/$DB_NAME"
+su -s /bin/bash "$USER" -c "export DATABASE_URL='$DATABASE_URL' && cd $INSTALL_DIR/packages/database && pnpm push"
 
 # ─── Install systemd units ─────────────────────────────────
 echo "⚙️  Installing systemd services..."
